@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="30">
+  <title>TikTok ↔ Kommo · Atribución</title>
+  <style>
+    :root {
+      --bg: #0b1020; --panel: #141b2f; --panel2: #1b2440; --line: #2a3558;
+      --text: #e7ecf8; --muted: #94a3c4; --accent: #25f4ee; --pink: #fe2c55;
+      --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    header { padding: 22px 28px; border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+    h1 span { color: var(--accent); }
+    .muted { color: var(--muted); font-size: 12px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge { font-size: 12px; padding: 5px 9px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--panel); }
+    .badge.ok { border-color: #14532d; color: #86efac; }
+    .badge.bad { border-color: #7f1d1d; color: #fca5a5; }
+    .badge.warn { border-color: #78350f; color: #fcd34d; }
+    main { padding: 22px 28px 48px; max-width: 1500px; margin: 0 auto; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 18px; }
+    .card, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .card { padding: 14px 16px; }
+    .card .num { font-size: 26px; font-weight: 700; }
+    .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .panel { padding: 16px; }
+    .panel h2 { font-size: 14px; margin: 0 0 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .alert { border: 1px solid #7f1d1d; background: #2a1118; color: #fecaca;
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; font-size: 13px; }
+    .alert ul { margin: 6px 0 0 18px; padding: 0; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .url { display: block; padding: 10px 12px; background: var(--panel2); border: 1px solid var(--line);
+      border-radius: 10px; font-size: 12px; overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .06em; }
+    tr:last-child td { border-bottom: 0; }
+    .status { font-weight: 700; }
+    .status.sent, .status.done { color: var(--ok); }
+    .status.pending, .status.processing { color: var(--warn); }
+    .status.failed, .status.dead { color: var(--bad); }
+    .small { font-size: 11px; color: var(--muted); }
+    .err { color: #fca5a5; max-width: 360px; overflow-wrap: anywhere; }
+    .btn { display: inline-block; border: 1px solid var(--line); background: var(--panel2);
+      color: var(--text); border-radius: 9px; padding: 7px 10px; font-size: 12px; cursor: pointer; }
+    .btn:hover { border-color: var(--accent); }
+    .btn.pink { background: #3a1220; border-color: #7f1d3a; }
+    form.inline { display: inline; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    .field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 4px; }
+    .field input { background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+      border-radius: 9px; padding: 8px 10px; font-size: 12px; min-width: 130px; }
+    .field input:focus { outline: 1px solid var(--accent); }
+    .split { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } main, header { padding-left: 14px; padding-right: 14px; } }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>TikTok <span>↔</span> Kommo · Atribución</h1>
+    <div class="muted">Actualizado {{ now }} · se recarga cada 30 s</div>
+  </div>
+  <div class="badges">
+    <span class="badge {{ 'ok' if not config_errors else 'bad' }}">{{ 'Config OK' if not config_errors else 'Falta configuración' }}</span>
+    <span class="badge">source: {{ event_source }}</span>
+    <span class="badge {{ 'ok' if worker_enabled else 'warn' }}">worker: {{ 'on' if worker_enabled else 'off' }}</span>
+    <span class="badge {{ 'warn' if test_code_set else '' }}">test code: {{ 'sí' if test_code_set else 'no' }}</span>
+    <a class="btn" href="/settings">Configuración</a>
+  </div>
+</header>
+
+<main>
+  {% if config_errors %}
+  <div class="alert">
+    <strong>Revisa Configuración:</strong>
+    <ul>{% for error in config_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="cards">
+    <div class="card"><div class="num">{{ metrics.leads }}</div><div class="label">Leads</div></div>
+    <div class="card"><div class="num">{{ metrics.clicks }}</div><div class="label">Clics puente</div></div>
+    <div class="card"><div class="num">{{ metrics.events }}</div><div class="label">Eventos</div></div>
+    <div class="card"><div class="num">{{ metrics.pending }}</div><div class="label">En cola</div></div>
+    <div class="card"><div class="num">{{ metrics.sent }}</div><div class="label">Enviados</div></div>
+    <div class="card"><div class="num">{{ metrics.dead }}</div><div class="label">Fallidos</div></div>
+  </div>
+
+  <div class="split">
+    <div class="panel">
+      <h2>Webhook para Kommo</h2>
+      <p class="small">Kommo → Ajustes → Integraciones → Web hooks. Activa <code>add_lead</code>,
+        <code>update_lead</code>, <code>status_lead</code> y <code>add_message</code>.</p>
+      <code class="url">{{ webhook_url }}</code>
+      <p class="small">Si Kommo no acepta la URL con <code>?secret=</code>, usa el header
+        <code>X-Webhook-Secret</code> (no configurable en la UI de Kommo; usa la URL).</p>
+    </div>
+    <div class="panel">
+      <h2>Puente de atribución</h2>
+      <p class="small">Destino del anuncio de TikTok. TikTok añade <code>ttclid</code>
+        automáticamente al ser una landing web; el puente lo guarda y redirige a WhatsApp con un código.</p>
+      <code class="url">{{ bridge_url }}</code>
+      <p class="small">Prueba sin guardar: <code>{{ bridge_url }}?dry_run=1&amp;utm_source=tiktok</code></p>
+    </div>
+  </div>
+
+  <div class="split" style="margin-top:16px">
+    <div class="panel">
+      <h2>Mapa de etapas</h2>
+      {% if stage_map %}
+      <table>
+        <thead><tr><th>Status ID</th><th>Clave</th><th>Rank</th><th>Evento TikTok</th><th>Activa</th></tr></thead>
+        <tbody>
+        {% for rule in stage_map %}
+          <tr>
+            <td class="mono">{{ rule.status_id }}</td>
+            <td>{{ rule.key }}</td>
+            <td>{{ rule.rank }}</td>
+            <td class="mono">{{ rule.event }}</td>
+            <td>{{ 'sí' if rule.enabled else 'no' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="small">KOMMO_STAGE_MAP está vacío. Edita el .env y reinicia el contenedor.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Enviar evento de prueba</h2>
+      <p class="small">Úsalo con <code>TIKTOK_TEST_EVENT_CODE</code> para validar en Events Manager.
+        En modo <code>crm</code> el <code>lead_id</code> es obligatorio.</p>
+      <form method="post" action="/admin/test-event" class="row">
+        <div class="field"><label>Lead ID</label><input name="lead_id" value="999999" required></div>
+        <div class="field"><label>Evento</label><input name="event" value="Contact" required></div>
+        <div class="field"><label>ttclid</label><input name="ttclid" placeholder="opcional"></div>
+        <div class="field"><label>Email</label><input name="email" placeholder="opcional"></div>
+        <div class="field"><label>Teléfono</label><input name="phone" placeholder="opcional"></div>
+        <div class="field"><label>Valor</label><input name="value" value="0"></div>
+        <button class="btn pink" type="submit">Encolar evento</button>
+      </form>
+      <form method="post" action="/admin/leads/999999/sync" class="inline" style="margin-top:10px">
+        <button class="btn" type="submit">Sincronizar lead 999999 desde Kommo</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2>Últimos eventos</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Lead</th><th>Evento</th><th>Etapa</th><th>Estado</th><th>Intentos</th><th>Creado</th><th>Error</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for event in events %}
+        <tr>
+          <td class="mono">{{ event.id }}</td>
+          <td>{{ event.lead_id }}{% if event.name %}<div class="small">{{ event.name }}{% if event.phone %} · {{ event.phone }}{% endif %}</div>{% endif %}</td>
+          <td class="mono">{{ event.event_name }}</td>
+          <td>{{ event.stage_key or '' }}</td>
+          <td class="status {{ event.status }}">{{ event.status }}</td>
+          <td>{{ event.attempts }}</td>
+          <td class="small">{{ event.created_at }}</td>
+          <td class="err small">{{ event.last_error or '' }}</td>
+          <td>
+            {% if event.status in ('dead', 'failed') %}
+            <form method="post" action="/admin/outbox/{{ event.id }}/retry" class="inline">
+              <button class="btn" type="submit">Reintentar</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="small">Todavía no hay eventos.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="split" style="margin-top:16px">
+    <div class="panel">
+      <h2>Clics del puente</h2>
+      <table>
+        <thead><tr><th>Código</th><th>Lead</th><th>ttclid</th><th>Campaña</th><th>Creado</th><th>Usado</th></tr></thead>
+        <tbody>
+        {% for click in clicks %}
+          <tr>
+            <td class="mono">{{ click.code }}</td>
+            <td>{{ click.lead_id or '' }}</td>
+            <td class="mono small">{{ (click.ttclid or '—')[:22] }}{% if click.ttclid and click.ttclid|length > 22 %}…{% endif %}</td>
+            <td class="small">{{ click.utm_campaign or '' }}</td>
+            <td class="small">{{ click.created_at }}</td>
+            <td class="small">{{ click.used_at or '' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="small">Sin clics todavía.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Webhooks recibidos</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Tipo</th><th>Lead</th><th>Procesado</th><th>Recibido</th><th>Error</th></tr></thead>
+        <tbody>
+        {% for hook in webhooks %}
+          <tr>
+            <td class="mono">{{ hook.id }}</td>
+            <td class="mono small">{{ hook.event_type }}</td>
+            <td>{{ hook.lead_id or '' }}</td>
+            <td>{{ 'sí' if hook.processed else 'no' }}</td>
+            <td class="small">{{ hook.received_at }}</td>
+            <td class="err small">{{ hook.error or '' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="small">Sin webhooks todavía.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="small" style="margin-top:18px">
+    Flujo: anuncio → <code>/r</code> guarda <code>ttclid</code> → WhatsApp con <code>REF-XXXXXXXX</code> →
+    Kommo dispara <code>add_message</code> → se vincula el clic → <code>status_lead</code> envía el evento
+    de la etapa más alta a TikTok. Los reintentos y la deduplicación viven en PostgreSQL.
+  </p>
+</main>
+</body>
+</html>

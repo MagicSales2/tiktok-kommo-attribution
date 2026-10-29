@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuración · TikTok ↔ Kommo</title>
+  <style>
+    :root {
+      --bg: #0b1020; --panel: #141b2f; --panel2: #1b2440; --line: #2a3558;
+      --text: #e7ecf8; --muted: #94a3c4; --accent: #25f4ee; --pink: #fe2c55;
+      --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    header { padding: 22px 28px; border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+    h1 span { color: var(--accent); }
+    .muted { color: var(--muted); font-size: 12px; }
+    main { padding: 22px 28px 48px; max-width: 1100px; margin: 0 auto; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px; margin-bottom: 16px; }
+    .panel h2 { font-size: 14px; margin: 0 0 4px; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--muted); }
+    .panel .hint { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 5px; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+      border-radius: 9px; padding: 9px 10px; font-size: 13px; font-family: inherit; }
+    .field textarea { min-height: 150px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: 1px solid var(--accent); }
+    .field .sub { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .check { display: flex; align-items: center; gap: 6px; color: var(--muted);
+      font-size: 11px; margin-top: 6px; }
+    .check input { width: auto; }
+    .badge { font-size: 11px; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--panel2); color: var(--muted); }
+    .badge.ok { border-color: #14532d; color: #86efac; }
+    .badge.bad { border-color: #7f1d1d; color: #fca5a5; }
+    .alert { border: 1px solid #7f1d1d; background: #2a1118; color: #fecaca;
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; font-size: 13px; }
+    .alert.ok { border-color: #14532d; background: #0f2a1a; color: #bbf7d0; }
+    .alert ul { margin: 6px 0 0 18px; padding: 0; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .url { display: block; padding: 10px 12px; background: var(--panel2); border: 1px solid var(--line);
+      border-radius: 10px; font-size: 12px; overflow-wrap: anywhere; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+    .btn { display: inline-block; border: 1px solid var(--line); background: var(--panel2);
+      color: var(--text); border-radius: 9px; padding: 10px 14px; font-size: 13px; cursor: pointer;
+      text-decoration: none; }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: #0d3b3a; border-color: #14706d; color: #ccfffd; }
+    .split { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } main, header { padding-left: 14px; padding-right: 14px; } }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>TikTok <span>↔</span> Kommo · Configuración</h1>
+    <div class="muted">Los secretos se guardan cifrados en la base. Nunca se muestran de vuelta.</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="/">Panel</a>
+  </div>
+</header>
+
+<main>
+  {% if ok %}
+  <div class="alert ok"><strong>Guardado.</strong> La configuración ya está activa; el worker la toma en el siguiente ciclo.</div>
+  {% endif %}
+
+  {% if errors %}
+  <div class="alert">
+    <strong>No se guardó:</strong>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if config_errors %}
+  <div class="alert">
+    <strong>Falta configuración para operar:</strong>
+    <ul>{% for error in config_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/settings" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="panel">
+      <h2>Webhook de Kommo</h2>
+      <p class="hint">Copia esta URL en Kommo → Ajustes → Integraciones → Web hooks.
+        Activa <code>add_lead</code>, <code>update_lead</code>, <code>status_lead</code> y
+        <code>add_message</code>.</p>
+      <code class="url">{{ webhook_url }}</code>
+    </div>
+
+    <div class="panel">
+      <h2>Kommo</h2>
+      <p class="hint">Subdominio sin <code>https://</code> ni <code>.kommo.com</code>.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="kommo_subdomain">Subdominio</label>
+          <input id="kommo_subdomain" name="kommo_subdomain" type="text"
+                 value="{{ settings.kommo_subdomain or '' }}" placeholder="magiapastelerta4">
+        </div>
+        <div class="field">
+          <label for="kommo_token">Token de API</label>
+          <input id="kommo_token" name="kommo_token" type="password" autocomplete="new-password"
+                 placeholder="{{ 'Configurado; deja vacío para conservar' if secret_status.kommo_token else 'Pega el token de Kommo' }}">
+          <label class="check"><input type="checkbox" name="clear_kommo_token" value="1"> Borrar token guardado</label>
+        </div>
+        <div class="field">
+          <label for="kommo_webhook_secret">Secreto del webhook</label>
+          <input id="kommo_webhook_secret" name="kommo_webhook_secret" type="password" autocomplete="new-password"
+                 placeholder="{{ 'Configurado; deja vacío para conservar' if secret_status.kommo_webhook_secret else 'Genera un secreto largo' }}">
+          <label class="check"><input type="checkbox" name="clear_kommo_webhook_secret" value="1"> Borrar secreto</label>
+          <div class="sub">Se usa en la URL <code>?secret=...</code>. Si lo cambias, actualiza la URL en Kommo.</div>
+        </div>
+        <div class="field">
+          <label for="kommo_pipeline_id">Pipeline ID (opcional)</label>
+          <input id="kommo_pipeline_id" name="kommo_pipeline_id" type="number"
+                 value="{{ settings.kommo_pipeline_id or '' }}" placeholder="Solo procesar este pipeline">
+        </div>
+        <div class="field">
+          <label for="kommo_field_ttclid">Campo ttclid (ID, opcional)</label>
+          <input id="kommo_field_ttclid" name="kommo_field_ttclid" type="number"
+                 value="{{ settings.kommo_field_ttclid or '' }}">
+        </div>
+        <div class="field">
+          <label for="kommo_field_ref">Campo REF (ID, opcional)</label>
+          <input id="kommo_field_ref" name="kommo_field_ref" type="number"
+                 value="{{ settings.kommo_field_ref or '' }}">
+        </div>
+        <div class="field">
+          <label for="kommo_field_value">Campo valor (ID, opcional)</label>
+          <input id="kommo_field_value" name="kommo_field_value" type="number"
+                 value="{{ settings.kommo_field_value or '' }}">
+        </div>
+        <div class="field">
+          <label for="kommo_field_currency">Campo moneda (ID, opcional)</label>
+          <input id="kommo_field_currency" name="kommo_field_currency" type="number"
+                 value="{{ settings.kommo_field_currency or '' }}">
+        </div>
+        <div class="field">
+          <label for="kommo_field_consent">Campo consentimiento (ID, opcional)</label>
+          <input id="kommo_field_consent" name="kommo_field_consent" type="number"
+                 value="{{ settings.kommo_field_consent or '' }}">
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="kommo_stage_map">Mapa de etapas → evento TikTok (JSON)</label>
+        <textarea id="kommo_stage_map" name="kommo_stage_map" spellcheck="false">{{ settings.kommo_stage_map or '{}' }}</textarea>
+        <div class="sub">Ejemplo: <code>{"111111":{"key":"nuevo","rank":1,"event":"Contact"}}</code>.
+          El <code>rank</code> debe crecer con el embudo. En modo CRM usa nombres personalizados.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>TikTok</h2>
+      <p class="hint">Elige el modo según tu campaña. El token se genera en Events Manager.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="tiktok_event_source">Modo</label>
+          <select id="tiktok_event_source" name="tiktok_event_source">
+            <option value="web" {% if settings.tiktok_event_source == 'web' %}selected{% endif %}>web (Pixel + ttclid)</option>
+            <option value="crm" {% if settings.tiktok_event_source == 'crm' %}selected{% endif %}>crm (CRM Event Set + lead_id)</option>
+            <option value="offline" {% if settings.tiktok_event_source == 'offline' %}selected{% endif %}>offline (Offline Event Set)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tiktok_pixel_id">Pixel ID (modo web)</label>
+          <input id="tiktok_pixel_id" name="tiktok_pixel_id" type="text"
+                 value="{{ settings.tiktok_pixel_id or '' }}">
+        </div>
+        <div class="field">
+          <label for="tiktok_event_set_id">Event Set ID (modo crm/offline)</label>
+          <input id="tiktok_event_set_id" name="tiktok_event_set_id" type="text"
+                 value="{{ settings.tiktok_event_set_id or '' }}">
+        </div>
+        <div class="field">
+          <label for="tiktok_access_token">Access token</label>
+          <input id="tiktok_access_token" name="tiktok_access_token" type="password" autocomplete="new-password"
+                 placeholder="{{ 'Configurado; deja vacío para conservar' if secret_status.tiktok_access_token else 'Pega el access token de TikTok' }}">
+          <label class="check"><input type="checkbox" name="clear_tiktok_access_token" value="1"> Borrar token guardado</label>
+        </div>
+        <div class="field">
+          <label for="tiktok_test_event_code">Test event code (opcional)</label>
+          <input id="tiktok_test_event_code" name="tiktok_test_event_code" type="text"
+                 value="{{ settings.tiktok_test_event_code or '' }}" placeholder="TEST12345">
+          <div class="sub">Déjalo vacío en producción.</div>
+        </div>
+        <div class="field">
+          <label for="tiktok_currency">Moneda</label>
+          <input id="tiktok_currency" name="tiktok_currency" type="text"
+                 value="{{ settings.tiktok_currency or 'COP' }}">
+        </div>
+        <div class="field">
+          <label for="tiktok_default_value">Valor por defecto</label>
+          <input id="tiktok_default_value" name="tiktok_default_value" type="number" step="0.01"
+                 value="{{ settings.tiktok_default_value }}">
+        </div>
+        <div class="field">
+          <label for="tiktok_web_page_url">URL de página para page.url (opcional)</label>
+          <input id="tiktok_web_page_url" name="tiktok_web_page_url" type="url"
+                 value="{{ settings.tiktok_web_page_url or '' }}" placeholder="https://tu-landing.com/promo">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>WhatsApp y puente</h2>
+      <p class="hint">El anuncio debe apuntar a <code>{{ settings.public_base_url }}/r</code> para capturar el clic.</p>
+      <div class="split">
+        <div class="field">
+          <label for="whatsapp_number">Número de WhatsApp</label>
+          <input id="whatsapp_number" name="whatsapp_number" type="text"
+                 value="{{ settings.whatsapp_number or '' }}" placeholder="573001234567">
+          <div class="sub">Solo dígitos, con código de país.</div>
+        </div>
+        <div class="field">
+          <label for="default_country_code">Código de país por defecto</label>
+          <input id="default_country_code" name="default_country_code" type="text"
+                 value="{{ settings.default_country_code or '' }}" placeholder="57">
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="whatsapp_message_template">Mensaje prellenado</label>
+        <textarea id="whatsapp_message_template" name="whatsapp_message_template"
+                  style="min-height:80px">{{ settings.whatsapp_message_template or '' }}</textarea>
+        <div class="sub">El marcador <code>{ref}</code> es obligatorio.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Worker</h2>
+      <p class="hint">La espera permite que llegue <code>add_message</code> con el REF antes de procesar el lead.</p>
+      <div class="split">
+        <div class="field">
+          <label for="lead_job_delay_seconds">Espera antes de procesar (segundos)</label>
+          <input id="lead_job_delay_seconds" name="lead_job_delay_seconds" type="number" step="0.5" min="0"
+                 value="{{ settings.lead_job_delay_seconds }}">
+        </div>
+        <div class="field">
+          <label for="max_attempts">Intentos máximos</label>
+          <input id="max_attempts" name="max_attempts" type="number" min="1"
+                 value="{{ settings.max_attempts }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" type="submit">Guardar configuración</button>
+      <a class="btn" href="/">Volver al panel</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

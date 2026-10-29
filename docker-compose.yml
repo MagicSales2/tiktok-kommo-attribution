@@ -1,0 +1,67 @@
+# ============================================================
+# TikTok <-> Kommo Attribution
+#
+# Aislamiento:
+#   - app: red interna (db) + red externa traefik-proxy.
+#   - db : SOLO red interna, sin puertos publicados.
+#   - No se publica ningún puerto al host; entra únicamente por Traefik.
+# ============================================================
+
+services:
+  app:
+    build: .
+    container_name: tiktok-kommo-attribution
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # En Docker la URL se construye aquí para no desincronizar usuario/clave.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-attribution}:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:-attribution}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+      - traefik-proxy
+    volumes:
+      # Persiste la clave de cifrado si SECRET_KEY no está en .env.
+      - appdata:/app/data
+    # Para depurar sin Traefik, descomenta y usa http://IP:8010
+    # ports:
+    #   - "127.0.0.1:8010:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik-proxy}"
+      - "traefik.http.routers.tiktokattr.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.tiktokattr.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.tiktokattr.tls=true"
+      - "traefik.http.routers.tiktokattr.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.tiktokattr.loadbalancer.server.port=8000"
+
+  db:
+    image: postgres:16-alpine
+    container_name: tiktok-kommo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-attribution}
+      POSTGRES_USER: ${POSTGRES_USER:-attribution}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  appdata:
+
+networks:
+  internal:
+    internal: true
+  traefik-proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik-proxy}
