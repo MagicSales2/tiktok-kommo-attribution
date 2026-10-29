@@ -83,11 +83,12 @@ deduplica por `event_source_id + event + event_id`.
 ### 3.2 Subir el proyecto
 
 ```bash
-sudo mkdir -p /opt/tiktok-kommo-attribution
-sudo chown "$USER":"$USER" /opt/tiktok-kommo-attribution
-# copia o clona el contenido de esta carpeta allí
+sudo git clone https://github.com/MagicSales2/tiktok-kommo-attribution.git /opt/tiktok-kommo-attribution
 cd /opt/tiktok-kommo-attribution
 ```
+
+También puedes copiar la carpeta por `scp`/SFTP o descomprimir un `.tar.gz` en
+`/opt/tiktok-kommo-attribution`.
 
 ### 3.3 Instalación guiada
 
@@ -98,8 +99,20 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-El script pregunta dominio, subdominio de Kommo y datos de Traefik. Genera
-automáticamente:
+El script pregunta dominio, subdominio de Kommo y datos de Traefik. Para este VPS
+se puede ejecutar sin preguntas:
+
+```bash
+sudo env \
+  DOMAIN=tiktok.skinoferta.cloud \
+  KOMMO_SUBDOMAIN=magiapastelerta4 \
+  TRAEFIK_NETWORK=traefik-proxy \
+  TRAEFIK_CERTRESOLVER=letsencrypt \
+  TRAEFIK_ENTRYPOINT=websecure \
+  ./install.sh --non-interactive
+```
+
+El script genera automáticamente:
 
 - `.env` con contraseña de PostgreSQL.
 - `SECRET_KEY` para cifrar los secretos.

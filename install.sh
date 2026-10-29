@@ -2,12 +2,29 @@
 # Instalación guiada en un VPS con Docker + Traefik.
 # Uso: sudo ./install.sh
 #      sudo ./install.sh --force   (regenera .env; rota SECRET_KEY)
+#      sudo DOMAIN=... KOMMO_SUBDOMAIN=... ./install.sh --non-interactive
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-FORCE="${1:-}"
-if [ -f .env ] && [ "$FORCE" != "--force" ]; then
+FORCE=false
+NON_INTERACTIVE=false
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=true ;;
+    --non-interactive) NON_INTERACTIVE=true ;;
+    -h|--help)
+      sed -n '2,5p' "$0"
+      exit 0
+      ;;
+    *)
+      echo "Opción desconocida: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -f .env ] && [ "$FORCE" != true ]; then
   echo "Ya existe .env. Para conservarlo, ejecuta:"
   echo "  docker compose up -d --build"
   echo "Para regenerarlo (rota secretos), ejecuta:"
@@ -30,12 +47,24 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 ask() {
-  local prompt="$1" default="$2" value
+  local prompt="$1" default="$2" var="${3:-}" value
+  if [ -n "$var" ] && [ -n "${!var:-}" ]; then
+    printf '%s' "${!var}"
+    return
+  fi
+  if [ "$NON_INTERACTIVE" = true ]; then
+    printf '%s' "$default"
+    return
+  fi
   read -r -p "$prompt [$default]: " value
   printf '%s' "${value:-$default}"
 }
 
-DOMAIN="$(ask 'Dominio público (ej. track.tudominio.com)' 'track.tudominio.com')"
+if [ "$NON_INTERACTIVE" = true ]; then
+  DOMAIN="$(ask 'Dominio público (ej. track.tudominio.com)' '' DOMAIN)"
+else
+  DOMAIN="$(ask 'Dominio público (ej. track.tudominio.com)' 'track.tudominio.com' DOMAIN)"
+fi
 DOMAIN="${DOMAIN#http://}"
 DOMAIN="${DOMAIN#https://}"
 DOMAIN="${DOMAIN%/}"
@@ -44,10 +73,10 @@ if [ -z "$DOMAIN" ] || [[ "$DOMAIN" != *.* ]]; then
   exit 1
 fi
 
-KOMMO_SUBDOMAIN="$(ask 'Subdominio de Kommo (solo el nombre)' 'magiapastelerta4')"
-TRAEFIK_NETWORK="$(ask 'Red de Traefik' 'traefik-proxy')"
-TRAEFIK_CERTRESOLVER="$(ask 'Resolver TLS de Traefik' 'letsencrypt')"
-TRAEFIK_ENTRYPOINT="$(ask 'Entrypoint HTTPS de Traefik' 'websecure')"
+KOMMO_SUBDOMAIN="$(ask 'Subdominio de Kommo (solo el nombre)' 'magiapastelerta4' KOMMO_SUBDOMAIN)"
+TRAEFIK_NETWORK="$(ask 'Red de Traefik' 'traefik-proxy' TRAEFIK_NETWORK)"
+TRAEFIK_CERTRESOLVER="$(ask 'Resolver TLS de Traefik' 'letsencrypt' TRAEFIK_CERTRESOLVER)"
+TRAEFIK_ENTRYPOINT="$(ask 'Entrypoint HTTPS de Traefik' 'websecure' TRAEFIK_ENTRYPOINT)"
 
 if ! docker network inspect "$TRAEFIK_NETWORK" >/dev/null 2>&1; then
   echo "La red '$TRAEFIK_NETWORK' no existe. Redes disponibles:"
@@ -61,7 +90,7 @@ DASH_PASS="$(openssl rand -base64 24 | tr -d '/+=' | head -c 24)"
 SECRET_KEY="$(openssl rand -hex 32)"
 WEBHOOK_SECRET="$(openssl rand -hex 32)"
 
-if [ "$FORCE" = "--force" ] && [ -f .env ]; then
+if [ "$FORCE" = true ] && [ -f .env ]; then
   cp -a .env ".env.bak.$(date +%Y%m%d%H%M%S)"
   echo "Backup del .env anterior creado."
 fi
